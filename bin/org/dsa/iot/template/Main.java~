@@ -1,0 +1,122 @@
+package org.dsa.iot.template;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+import org.dsa.iot.dslink.DSLink;
+import org.dsa.iot.dslink.DSLinkFactory;
+import org.dsa.iot.dslink.DSLinkHandler;
+import org.dsa.iot.dslink.node.Node;
+import org.dsa.iot.dslink.node.NodeBuilder;
+import org.dsa.iot.dslink.node.Permission;
+import org.dsa.iot.dslink.node.actions.Action;
+import org.dsa.iot.dslink.node.actions.ActionResult;
+import org.dsa.iot.dslink.node.actions.EditorType;
+import org.dsa.iot.dslink.node.actions.Parameter;
+import org.dsa.iot.dslink.node.value.Value;
+import org.dsa.iot.dslink.node.value.ValueType;
+import org.dsa.iot.dslink.util.Objects;
+import org.dsa.iot.dslink.util.handler.Handler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * The main class that starts the DSLink. Typically it extends
+ * {@link DSLinkHandler} and the main method extends into it.
+ */
+public class Main extends DSLinkHandler {
+
+	Node superRoot = null;
+	public String currentLine = null;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+
+    @Override
+    public boolean isResponder() {
+        return true;
+    }
+
+    @Override
+    public void onResponderInitialized(DSLink link) {
+        superRoot = link.getNodeManager().getSuperRoot();
+        
+        //set action for args sent by user
+        Action act = setPathAction();
+        superRoot.clearChildren();
+        superRoot.createChild("Set Values").setAction(act).setSerializable(false)
+            .build();
+    }
+
+    //set up action for setting URL information
+    private Action setPathAction() {
+        Action act = new Action(Permission.READ, new CreateConnHandler());
+        act.addParameter(new Parameter("Device Name", ValueType.STRING).setPlaceHolder("Local Host"));
+        act.addParameter(new Parameter("URL", ValueType.STRING));
+        return act;
+    }
+    
+    //receive URL path and label information
+    //then build the host level node
+    private class CreateConnHandler implements Handler<ActionResult> {
+
+        @Override
+        public void handle(ActionResult event) {
+        	
+            String name = event.getParameter("Device Name", ValueType.STRING).getString();
+            String url = event.getParameter("URL", ValueType.STRING).getString();
+
+            // child builder helper func 
+            NodeBuilder childBuilder = superRoot.createChild(name);
+            Node child = childBuilder.build();
+
+            // grand child builder helper func
+            NodeBuilder grandChildBuilder = child.createChild("ChildBuilder");
+            grandChildBuilder.setDisplayName("result");
+            grandChildBuilder.setValueType(ValueType.NUMBER);
+            grandChildBuilder.setValueType(ValueType.STRING);
+            Node grandChild = grandChildBuilder.build();
+
+            //start a new thread for pinging
+        	Thread pingThread = new Thread(new PingResults(url, grandChild));
+        	pingThread.start(); 
+
+        }
+    }
+       
+    /* receives a url and a grandChild corresponding to the calling child though
+       the grandChild names are same. It is resolved using calling parent's name */
+    private class PingResults implements Runnable {
+
+    	String url;
+    	Node grandChild;
+    	public PingResults(String url, Node grandChild) {
+    		this.url = url;
+    		this.grandChild = grandChild;
+    	}
+    	@Override
+    	public void run() {
+    		try {
+        		Process p = Runtime.getRuntime().exec("ping " + url);
+        		BufferedReader inputStream = new BufferedReader(
+					new InputStreamReader(p.getInputStream()));
+
+        		String s = "";
+        		while ((s = inputStream.readLine()) != null) {
+        			grandChild.setValue(new Value(s));
+        		}
+        	} catch (Exception e) {
+			e.printStackTrace();
+        	}
+    	}
+    }
+    
+    @Override
+    public void onResponderConnected(DSLink link) {
+        LOGGER.info("Connected");
+    }
+
+    public static void main(String[] args) {
+        DSLinkFactory.start(args, new Main());
+    }
+}
