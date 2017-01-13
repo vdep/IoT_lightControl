@@ -5,7 +5,7 @@ This is a Simple IoT usecase to demonstrate "machine-to-machine" (M2M) communica
 The LED bulb turns on automatically if the room is dark (due to power failure or some other reason) and sends an email alert to the building manager regarding the same. The brightness level in the room is monitored through light sensor in an android phone.
 #Architecture
 <p align="center">
-  <img src = "https://github.com/vdep/IoT_lightController/blob/master/arc1.png"/>
+  <img src = "https://github.com/vdep/IoT_lightController/blob/master/lc.png"/>
 </p>
 
 1. The Brightness level of a living area is monitored continously with the help of light sensor in an Android phone.
