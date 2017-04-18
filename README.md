@@ -3,7 +3,7 @@
 This is a Simple IoT usecase to demonstrate "machine-to-machine" (M2M) communication using [Distributed Services Architecture(DSA)](http://iot-dsa.org/)
 
 The LED bulb turns on automatically if the room is dark (due to power failure or some other reason) and sends an email alert to the building manager regarding the same. The brightness level in the room is monitored through light sensor in an android phone.
-#Architecture
+# Architecture
 <p align="center">
   <img src = "https://github.com/vdep/IoT_lightController/blob/master/lc.png"/>
 </p>
